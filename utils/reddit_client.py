@@ -3,16 +3,16 @@ import pandas as pd
 from datetime import datetime, timedelta
 import streamlit as st
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 class RedditClient:
     def __init__(self):
         # Debugging: Print environment variables
         print("Checking environment variables in reddit_client.py:")
-        print(f"REDDIT_CLIENT_ID: {os.getenv('REDDIT_CLIENT_ID')}")
-        print(f"REDDIT_CLIENT_SECRET: {os.getenv('REDDIT_CLIENT_SECRET')}")
+        # print(f"REDDIT_CLIENT_ID: {os.getenv('REDDIT_CLIENT_ID')}")
+        # print(f"REDDIT_CLIENT_SECRET: {os.getenv('REDDIT_CLIENT_SECRET')}")
         print("---------------------------------------")
         
         client_id = "WCJasChIwA9F6W3DnVmIiQ"
