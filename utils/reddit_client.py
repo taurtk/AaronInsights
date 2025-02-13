@@ -3,15 +3,32 @@ import pandas as pd
 from datetime import datetime, timedelta
 import streamlit as st
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class RedditClient:
     def __init__(self):
-        # Initialize with credentials from environment variables
-        self.reddit = praw.Reddit(
-            client_id=os.environ.get("REDDIT_CLIENT_ID"),
-            client_secret=os.environ.get("REDDIT_CLIENT_SECRET"),
-            user_agent="IdeaGenerator/1.0 (by /u/IdeasBot)"
-        )
+        # Debugging: Print environment variables
+        print("Checking environment variables in reddit_client.py:")
+        print(f"REDDIT_CLIENT_ID: {os.getenv('REDDIT_CLIENT_ID')}")
+        print(f"REDDIT_CLIENT_SECRET: {os.getenv('REDDIT_CLIENT_SECRET')}")
+        print("---------------------------------------")
+        
+        client_id = "WCJasChIwA9F6W3DnVmIiQ"
+        client_secret = "c2GNbz0F-KwrB3-BGuNIzDpED_HZ1A"
+        user_agent = "IdeaGenerator/1.0 (by /u/IdeasBot)"  # Set a default user agent
+
+        # If environment variables are not set, try reading from praw.ini (optional)
+        if not client_id or not client_secret:
+            print("Environment variables not found, attempting to load from praw.ini")
+            self.reddit = praw.Reddit(user_agent=user_agent)  # Load from praw.ini
+        else:
+            self.reddit = praw.Reddit(
+                client_id=client_id,
+                client_secret=client_secret,
+                user_agent=user_agent
+            )
 
     @st.cache_data(ttl=3600)
     def fetch_subreddit_data(_self, subreddit_name, time_filter='week', limit=100):
