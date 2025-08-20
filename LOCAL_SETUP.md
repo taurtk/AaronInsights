@@ -60,7 +60,7 @@ http://localhost:8501
 
 4. Login credentials:
 - Username: aaron
-- Password: aaroneha@321
+- Password: 
 
 ## Directory Structure
 ```

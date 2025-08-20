@@ -2,6 +2,7 @@ import streamlit as st
 from utils.reddit_client import RedditClient
 from utils.quora_client import QuoraClient
 from utils.deepseek_client import DeepSeekClient
+from utils.waitlist import add_to_waitlist, is_on_waitlist
 
 # Page configuration
 st.set_page_config(
@@ -229,6 +230,45 @@ st.markdown("""
     margin-top: 0.5rem;
     font-weight: 500;
 }
+
+.idea-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    border-left: 4px solid #667eea;
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.metric-card {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.competitor-list {
+    background: #f7fafc;
+    padding: 1rem;
+    border-radius: 10px;
+    margin: 0.5rem 0;
+}
+
+.roadmap-section {
+    background: linear-gradient(145deg, #e6fffa 0%, #f0fff4 100%);
+    padding: 1.5rem;
+    border-radius: 15px;
+    margin: 1rem 0;
+    border-left: 4px solid #38a169;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -239,108 +279,203 @@ deepseek_client = DeepSeekClient()
 
 # Main application
 def main():
-    # Enhanced Header
-    st.markdown("""
-    <div class="main-header">
-        <h1>✨ NicheGenius</h1>
-        <p>AI-Powered Niche Product Idea Generator</p>
-        <p>Discover untapped market opportunities and innovative business ideas</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Enhanced Input section
-    col1, col2, col3 = st.columns([1, 3, 1])
-    with col2:
+    # Session state to track user's email
+    if 'user_email' not in st.session_state:
+        st.session_state.user_email = None
+
+    if not st.session_state.user_email:
+        st.title("🚀 Join the NicheGenius Waitlist!")
+        email = st.text_input("Enter your email to get started:")
+        if st.button("Join Waitlist"):
+            if email:
+                add_to_waitlist(email)
+                st.session_state.user_email = email
+                st.success("You're on the waitlist! You can now use the app.")
+                st.rerun()
+            else:
+                st.error("Please enter a valid email address.")
+    else:
+        # Enhanced Header
         st.markdown("""
-        <div style="text-align: center; margin: 2rem 0;">
-            <h3 style="color: #2d3748; font-weight: 600; margin-bottom: 1rem;">🎯 What's your interest area?</h3>
+        <div class="main-header">
+            <h1>✨ NicheGenius</h1>
+            <p>AI-Powered Niche Product Idea Generator</p>
+            <p>Discover untapped market opportunities and innovative business ideas</p>
         </div>
         """, unsafe_allow_html=True)
-        prompt = st.text_input(
-            "Enter your topic:", 
-            placeholder="e.g., sustainable living, remote work, fitness tech...",
-            label_visibility="collapsed"
-        )
+        
+        # Enhanced Input section
+        col1, col2, col3 = st.columns([1, 3, 1])
+        with col2:
+            st.markdown("""
+            <div style="text-align: center; margin: 2rem 0;">
+                <h3 style="color: #2d3748; font-weight: 600; margin-bottom: 1rem;">🎯 What's your interest area?</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            prompt = st.text_input(
+                "Enter your topic:",
+                placeholder="e.g., sustainable living, remote work, fitness tech...",
+                label_visibility="collapsed"
+            )
 
-    if st.button("Generate Ideas"):
-        if prompt:
-            with st.spinner("⏳ Loading ideas... This may take up to 1 minute"):
-                queries = deepseek_client.generate_search_queries(prompt)
+        if st.button("Generate Ideas"):
+            if prompt:
+                with st.spinner("⏳ Loading ideas... This may take up to 1 minute"):
+                    queries = deepseek_client.generate_search_queries(prompt)
 
-                # Check if queries were generated successfully
-                if not queries['subreddits'] and not queries['quora']:
-                    st.error("🚫 Failed to generate search queries. Please try a different topic.")
-                    return
-                reddit_data = reddit_client.fetch_subreddit_data(queries['subreddits'])
-                quora_data = quora_client.fetch_quora_data(queries['quora'])
-                
-                combined_data = reddit_data + quora_data
-                
-                # Generate ideas with source tracking
-                unique_ideas = deepseek_client.generate_unique_ideas(prompt, combined_data, 20)
-                enriched_ideas = deepseek_client.enrich_ideas(unique_ideas)
-                
-                if enriched_ideas:
-                    # Simple clustering by keywords
-                    clusters = {}
-                    for idea in enriched_ideas:
-                        # Use the first keyword as the cluster key
-                        if idea.get('keywords'):
-                            key = idea['keywords'][0]
-                            if key not in clusters:
-                                clusters[key] = []
-                            clusters[key].append(idea)
-
-                    for cluster, ideas in clusters.items():
-                        st.subheader(f"Theme: {cluster.capitalize()}")
-                        for i, idea_data in enumerate(ideas, 1):
-                            st.markdown(f"**Idea {i}:** {idea_data['idea']}")
-                            st.write(f"**Novelty:** {idea_data['novelty']}/10 | **Uniqueness:** {idea_data['uniqueness']}/10 | **Business Value:** {idea_data['business_value']}/10")
-                            st.write(f"**Justification:** {idea_data['justification']}")
-                            st.write(f"**Market Size:** {idea_data['market_size']}")
-                            st.write(f"**Competitors & Differentiator:** {idea_data['competitors']}")
-                            st.write(f"**Monetization Model:** {idea_data['monetization_model']}")
-                            st.write("**Hackathon MVP Roadmap:**")
-                            for step in idea_data['hackathon_mvp_roadmap']:
-                                st.write(f"- {step}")
-                            st.write("**Investor Pitch Roadmap:**")
-                            for step in idea_data['investor_pitch_roadmap']:
-                                st.write(f"- {step}")
-                            st.divider()
-                            if st.button(f"Refine Idea", key=f"refine_{cluster}_{i}"):
-                                with st.spinner("Refining idea..."):
-                                    refined_ideas = deepseek_client.refine_idea(idea_data['idea'])
-                                    for refined_idea in refined_ideas:
-                                        st.info(f"**{refined_idea['title']}**: {refined_idea['description']}")
+                    # Check if queries were generated successfully
+                    if not queries['subreddits'] and not queries['quora']:
+                        st.error("🚫 Failed to generate search queries. Please try a different topic.")
+                        return
+                    reddit_data = reddit_client.fetch_subreddit_data(queries['subreddits'])
+                    quora_data = quora_client.fetch_quora_data(queries['quora'])
                     
+                    combined_data = reddit_data + quora_data
+                    
+                    # Generate enriched ideas with market intelligence
+                    enriched_ideas = deepseek_client.generate_enriched_ideas(combined_data, 5)
+                    
+                    if enriched_ideas:
+                        # Simple clustering by keywords
+                        clusters = {}
+                        for idea in enriched_ideas:
+                            # Use the first keyword as the cluster key
+                            if idea.get('keywords'):
+                                key = idea['keywords'][0]
+                                if key not in clusters:
+                                    clusters[key] = []
+                                clusters[key].append(idea)
 
-                else:
-                    st.error("🚫 No data found for the given topic. Try a different search term.")
-        else:
-            st.markdown("""
-            <div style="text-align: center; padding: 2rem; background: linear-gradient(145deg, #f7fafc 0%, #edf2f7 100%); border-radius: 20px; margin: 2rem 0;">
-                <h4 style="color: #4a5568; margin-bottom: 1rem;">💭 Ready to discover your next big idea?</h4>
-                <p style="color: #718096;">Enter a topic above to discover niche product opportunities!</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Enhanced example topics
-            st.markdown("""
-            <div style="text-align: center; margin: 3rem 0 2rem 0;">
-                <h3 style="color: #2d3748; font-weight: 600;">🌟 Popular Topics</h3>
-                <p style="color: #718096; margin-bottom: 2rem;">Click any topic to get started instantly</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            example_cols = st.columns(3)
-            examples = [
-                "🌱 Sustainable Living", "💻 Remote Work Tools", "🏋️ Fitness Tech",
-                "🎨 Creative Hobbies", "🏠 Smart Home", "📚 Online Learning"
-            ]
-            for i, example in enumerate(examples):
-                with example_cols[i % 3]:
-                    if st.button(example, key=f"example_{i}"):
-                        st.rerun()
+                        for cluster, ideas in clusters.items():
+                            st.markdown(f"<div class='ideas-header'><h2>🎯 {cluster.capitalize()}</h2></div>", unsafe_allow_html=True)
+                            
+                            for i, idea_data in enumerate(ideas, 1):
+                                st.markdown(f"""
+                                <div class="idea-card">
+                                    <h3 style="color: #2d3748; margin-bottom: 1rem;">💡 Idea {i}</h3>
+                                    <p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem;">{idea_data['idea']}</p>
+                                    
+                                    <div class="metric-grid">
+                                        <div class="metric-card">
+                                            <h4 style="color: #667eea; margin: 0;">⭐ {idea_data.get('novelty', 'N/A')}/10</h4>
+                                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #718096;">Novelty</p>
+                                        </div>
+                                        <div class="metric-card">
+                                            <h4 style="color: #38a169; margin: 0;">🎯 {idea_data.get('uniqueness', 'N/A')}/10</h4>
+                                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #718096;">Uniqueness</p>
+                                        </div>
+                                        <div class="metric-card">
+                                            <h4 style="color: #f56565; margin: 0;">💰 {idea_data.get('business_value', 'N/A')}/10</h4>
+                                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #718096;">Business Value</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                # Display justification
+                                if idea_data.get('justification'):
+                                    st.markdown(f"**💭 Analysis:** {idea_data['justification']}")
+                                
+                                # Display market data properly
+                                if idea_data.get('market_analysis'):
+                                    market = idea_data['market_analysis']
+                                    st.markdown(f"""
+                                    <div style="background: #f0f9ff; padding: 1rem; border-radius: 10px; margin: 1rem 0;">
+                                        <h4 style="color: #1e40af; margin-bottom: 0.5rem;">📊 Market Analysis</h4>
+                                        <p><strong>Market Size:</strong> {market.get('tam', 'Analyzing...')}</p>
+                                        <p><strong>Growth Rate:</strong> {market.get('cagr', 'Calculating...')}</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                # Display competitors properly
+                                if idea_data.get('competitive_landscape'):
+                                    comp = idea_data['competitive_landscape']
+                                    competitors_html = "<div class='competitor-list'><h4 style='color: #dc2626; margin-bottom: 0.5rem;'>🏆 Competitive Landscape</h4>"
+                                    
+                                    if comp.get('direct_competitors'):
+                                        competitors_html += "<p><strong>Direct Competitors:</strong></p><ul>"
+                                        for competitor in comp['direct_competitors']:
+                                            if isinstance(competitor, dict):
+                                                competitors_html += f"<li><strong>{competitor.get('name', 'Unknown')}:</strong> {competitor.get('description', 'N/A')}</li>"
+                                            else:
+                                                competitors_html += f"<li>{competitor}</li>"
+                                        competitors_html += "</ul>"
+                                    
+                                    if comp.get('differentiator'):
+                                        competitors_html += f"<p><strong>🎯 Key Differentiator:</strong> {comp['differentiator']}</p>"
+                                    
+                                    competitors_html += "</div>"
+                                    st.markdown(competitors_html, unsafe_allow_html=True)
+                                
+                                # Display monetization properly
+                                if idea_data.get('monetization'):
+                                    mon = idea_data['monetization']
+                                    st.markdown(f"""
+                                    <div style="background: #f0fdf4; padding: 1rem; border-radius: 10px; margin: 1rem 0;">
+                                        <h4 style="color: #166534; margin-bottom: 0.5rem;">💰 Monetization Strategy</h4>
+                                        <p><strong>Primary Model:</strong> {mon.get('primary_model', 'TBD')}</p>
+                                        <p><strong>Pricing Strategy:</strong> {mon.get('pricing_strategy', 'TBD')}</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                # Display roadmaps properly
+                                if idea_data.get('roadmaps'):
+                                    roadmaps = idea_data['roadmaps']
+                                    
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        if roadmaps.get('hackathon_mvp'):
+                                            mvp = roadmaps['hackathon_mvp']
+                                            st.markdown(f"""
+                                            <div class="roadmap-section">
+                                                <h4 style="color: #166534; margin-bottom: 0.5rem;">🚀 Hackathon MVP ({mvp.get('timeline', '2-4 weeks')})</h4>
+                                                <ul>
+                                            """ + "".join([f"<li>{milestone}</li>" for milestone in mvp.get('milestones', [])]) + "</ul></div>", unsafe_allow_html=True)
+                                    
+                                    with col2:
+                                        if roadmaps.get('investor_pitch'):
+                                            pitch = roadmaps['investor_pitch']
+                                            st.markdown(f"""
+                                            <div class="roadmap-section">
+                                                <h4 style="color: #166534; margin-bottom: 0.5rem;">💼 Investor Pitch ({pitch.get('timeline', '3-6 months')})</h4>
+                                                <ul>
+                                            """ + "".join([f"<li>{milestone}</li>" for milestone in pitch.get('milestones', [])]) + "</ul></div>", unsafe_allow_html=True)
+                                
+                                st.divider()
+                                if st.button(f"🔄 Refine This Idea", key=f"refine_{cluster}_{i}"):
+                                    with st.spinner("Refining idea..."):
+                                        refined_ideas = deepseek_client.refine_idea(idea_data['idea'])
+                                        for refined_idea in refined_ideas:
+                                            st.info(f"**{refined_idea['title']}**: {refined_idea['description']}")
+                        
+
+                    else:
+                        st.error("🚫 No data found for the given topic. Try a different search term.")
+            else:
+                st.markdown("""
+                <div style="text-align: center; padding: 2rem; background: linear-gradient(145deg, #f7fafc 0%, #edf2f7 100%); border-radius: 20px; margin: 2rem 0;">
+                    <h4 style="color: #4a5568; margin-bottom: 1rem;">💭 Ready to discover your next big idea?</h4>
+                    <p style="color: #718096;">Enter a topic above to discover niche product opportunities!</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Enhanced example topics
+                st.markdown("""
+                <div style="text-align: center; margin: 3rem 0 2rem 0;">
+                    <h3 style="color: #2d3748; font-weight: 600;">🌟 Popular Topics</h3>
+                    <p style="color: #718096; margin-bottom: 2rem;">Click any topic to get started instantly</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                example_cols = st.columns(3)
+                examples = [
+                    "🌱 Sustainable Living", "💻 Remote Work Tools", "🏋️ Fitness Tech",
+                    "🎨 Creative Hobbies", "🏠 Smart Home", "📚 Online Learning"
+                ]
+                for i, example in enumerate(examples):
+                    with example_cols[i % 3]:
+                        if st.button(example, key=f"example_{i}"):
+                            st.rerun()
 
 if __name__ == "__main__":
     main()

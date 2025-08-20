@@ -19,7 +19,7 @@ def check_password():
     if login_form():
         if (
             st.session_state['username'].strip() == 'aaron'
-            and hmac.compare_digest(st.session_state['password'], 'aaroneha@321')
+            and hmac.compare_digest(st.session_state['password'], '@321')
         ):
             st.session_state['authenticated'] = True
             st.rerun()
