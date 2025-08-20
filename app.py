@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 from utils.reddit_client import RedditClient
 from utils.quora_client import QuoraClient
 from utils.deepseek_client import DeepSeekClient
@@ -275,8 +274,10 @@ def main():
                 reddit_data = reddit_client.fetch_subreddit_data(queries['subreddits'])
                 quora_data = quora_client.fetch_quora_data(queries['quora'])
                 
+                combined_data = reddit_data + quora_data
+                
                 # Generate ideas with source tracking
-                unique_ideas = deepseek_client.generate_unique_ideas(prompt, reddit_data, quora_data, 20)
+                unique_ideas = deepseek_client.generate_unique_ideas(prompt, combined_data, 20)
                 
                 if unique_ideas:
                     reddit_count = sum(1 for idea in unique_ideas if idea['source'] == 'reddit')

@@ -1,4 +1,3 @@
-import pandas as pd
 import streamlit as st
 from datetime import datetime, timedelta
 from utils.deepseek_client import DeepSeekClient
@@ -8,60 +7,60 @@ class DataProcessor:
         self.deepseek = DeepSeekClient()
 
     @staticmethod
-    def identify_trends(df):
+    def identify_trends(data: list) -> list:
         """Identify trends in the processed data"""
-        if df.empty:
-            return pd.DataFrame()
-
-        # Group keywords and calculate metrics
-        all_keywords = []
-        for keywords in df['keywords']:
-            all_keywords.extend(keywords)
-
-        keyword_stats = pd.DataFrame({
-            'keyword': all_keywords
-        }).value_counts().reset_index()
-        keyword_stats.columns = ['keyword', 'frequency']
-
-        # Calculate average sentiment per keyword
-        keyword_sentiments = {}
-        for _, row in df.iterrows():
-            sentiment = row['sentiment']
-            for keyword in row['keywords']:
-                if keyword in keyword_sentiments:
-                    keyword_sentiments[keyword].append(sentiment)
-                else:
-                    keyword_sentiments[keyword] = [sentiment]
-
-        keyword_stats['avg_sentiment'] = keyword_stats['keyword'].apply(
-            lambda x: sum(keyword_sentiments[x])/len(keyword_sentiments[x])
-        )
-
-        return keyword_stats.sort_values('frequency', ascending=False)
-
-    def generate_ideas(self, trends_df, num_ideas=5):
-        """Generate business ideas using DeepSeek"""
-        if trends_df.empty:
+        if not data:
             return []
 
-        return self.deepseek.generate_business_ideas(trends_df, num_ideas)
+        all_keywords = [keyword for item in data for keyword in item.get('keywords', [])]
+        keyword_counts = Counter(all_keywords)
 
-    def analyze_deep_trends(self, df):
+        keyword_sentiments = {}
+        for item in data:
+            sentiment = item.get('sentiment', 0)
+            for keyword in item.get('keywords', []):
+                if keyword not in keyword_sentiments:
+                    keyword_sentiments[keyword] = []
+                keyword_sentiments[keyword].append(sentiment)
+
+        trends = [
+            {
+                'keyword': keyword,
+                'frequency': count,
+                'avg_sentiment': sum(keyword_sentiments.get(keyword, [0])) / len(keyword_sentiments.get(keyword, [1]))
+            }
+            for keyword, count in keyword_counts.items()
+        ]
+
+        return sorted(trends, key=lambda x: x['frequency'], reverse=True)
+
+    def generate_ideas(self, trends_data: list, num_ideas=5):
+        """Generate business ideas using DeepSeek"""
+        if not trends_data:
+            return []
+
+        return self.deepseek.generate_business_ideas(trends_data, num_ideas)
+
+    def analyze_deep_trends(self, data: list):
         """Perform deep trend analysis using DeepSeek"""
-        if df.empty:
+        if not data:
             return None
 
-        return self.deepseek.analyze_trends(df)
+        return self.deepseek.analyze_trends(data)
 
     @staticmethod
-    def prepare_export_data(df, trends_df, deep_analysis=None):
+    def prepare_export_data(data: list, trends_data: list, deep_analysis=None):
         """Prepare data for export"""
+        top_posts = sorted(data, key=lambda x: x.get('score', 0), reverse=True)[:10]
         export_data = {
             'analysis_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'posts_analyzed': len(df),
-            'trending_topics': trends_df['keyword'].tolist()[:10],
-            'average_sentiment': df['sentiment'].mean(),
-            'top_posts': df[['title', 'score', 'sentiment']].head(10).to_dict('records'),
+            'posts_analyzed': len(data),
+            'trending_topics': [trend['keyword'] for trend in trends_data[:10]],
+            'average_sentiment': sum(item.get('sentiment', 0) for item in data) / len(data) if data else 0,
+            'top_posts': [
+                {'title': post.get('title'), 'score': post.get('score'), 'sentiment': post.get('sentiment')}
+                for post in top_posts
+            ],
             'deep_analysis': deep_analysis
         }
         return export_data

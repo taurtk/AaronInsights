@@ -1,5 +1,4 @@
 import praw
-import pandas as pd
 from datetime import datetime, timedelta
 import streamlit as st
 import os
@@ -64,7 +63,7 @@ class RedditClient:
                 st.warning(f"Skipping subreddit '{subreddit_name}': {str(e)}")
                 continue
         
-        return pd.DataFrame(all_posts) if all_posts else pd.DataFrame()
+        return all_posts
 
     def get_comments(self, post_id, limit=50):
         """Fetch comments for a specific post"""
@@ -80,7 +79,7 @@ class RedditClient:
                     'created_utc': datetime.fromtimestamp(comment.created_utc)
                 })
 
-            return pd.DataFrame(comments)
+            return comments
         except Exception as e:
             st.error(f"Error fetching comments: {str(e)}")
-            return pd.DataFrame()
+            return []

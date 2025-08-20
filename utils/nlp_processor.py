@@ -3,7 +3,6 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from collections import Counter
-import pandas as pd
 import streamlit as st
 
 # Download required NLTK data
@@ -39,20 +38,14 @@ class NLPProcessor:
         word_freq = Counter(words)
         return word_freq.most_common(top_n)
 
-    def process_dataframe(self, df):
-        """Process DataFrame with sentiment analysis and keyword extraction"""
-        if df.empty:
-            return df
+    def process_data(self, data: list) -> list:
+        """Process a list of dictionaries with sentiment analysis and keyword extraction"""
+        if not data:
+            return []
 
-        # Combine title and text for analysis
-        df['combined_text'] = df['title'] + ' ' + df['text'].fillna('')
+        for item in data:
+            combined_text = item.get('title', '') + ' ' + item.get('text', '')
+            item['sentiment'] = self.analyze_sentiment(combined_text)
+            item['keywords'] = [kw[0] for kw in self.extract_keywords(combined_text)]
 
-        # Add sentiment scores
-        df['sentiment'] = df['combined_text'].apply(self.analyze_sentiment)
-
-        # Extract keywords
-        df['keywords'] = df['combined_text'].apply(
-            lambda x: [kw[0] for kw in self.extract_keywords(x)]
-        )
-
-        return df
+        return data
