@@ -1,8 +1,5 @@
 import streamlit as st
 import pandas as pd
-from dotenv import load_dotenv
-
-load_dotenv()
 from utils.reddit_client import RedditClient
 from utils.quora_client import QuoraClient
 from utils.deepseek_client import DeepSeekClient

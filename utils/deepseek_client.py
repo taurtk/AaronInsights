@@ -7,8 +7,14 @@ import pandas as pd
 
 class DeepSeekClient:
     def __init__(self):
+        # Try Streamlit secrets first, then environment variables
+        try:
+            api_key = st.secrets["DEEPSEEK_API_KEY"]
+        except:
+            api_key = os.getenv("DEEPSEEK_API_KEY", "736f180b-6d5b-4294-8695-d14ffd734eff")
+        
         self.client = openai.OpenAI(
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            api_key=api_key,
             base_url="https://api.sambanova.ai/v1",
             http_client=httpx.Client(),
         )
