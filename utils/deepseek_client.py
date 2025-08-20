@@ -4,10 +4,14 @@ import streamlit as st
 import json
 import httpx
 import pandas as pd
+from .market_enricher import MarketEnricher
 
 class DeepSeekClient:
     def __init__(self):
         api_key = os.getenv("DEEPSEEK_API_KEY")
+        print(f"API Key from env: {api_key}")
+        if not api_key:
+            api_key = "736f180b-6d5b-4294-8695-d14ffd734eff" # Fallback
         
         self.client = openai.OpenAI(
             api_key=api_key,
@@ -15,6 +19,7 @@ class DeepSeekClient:
             http_client=httpx.Client(),
         )
         self.model = "Llama-4-Maverick-17B-128E-Instruct"
+        self.market_enricher = MarketEnricher(self)
 
     @st.cache_data(ttl=3600)
     def generate_business_ideas(_self, trends_data, num_ideas=5):
@@ -133,6 +138,24 @@ Important:
                 "features": ["Service will be restored shortly"]
             }] * num_ideas
 
+    @st.cache_data(ttl=3600)
+    def generate_enriched_ideas(_self, trends_data, num_ideas=5):
+        """Generate business ideas with full YC-tier market intelligence"""
+        # First generate base ideas
+        base_ideas = _self.generate_business_ideas(trends_data, num_ideas)
+        
+        # Enrich each idea with market data
+        enriched_ideas = []
+        for idea in base_ideas:
+            try:
+                enriched_idea = _self.market_enricher.enrich_idea_with_market_data(idea)
+                enriched_ideas.append(enriched_idea)
+            except Exception as e:
+                st.warning(f"Failed to enrich idea: {str(e)}")
+                enriched_ideas.append(idea)
+        
+        return enriched_ideas
+
     def _validate_subreddits(self, subreddits: list) -> list:
         """Map AI-generated subreddit names to valid ones with Y Combinator priority"""
         valid_mapping = {
@@ -224,6 +247,54 @@ Important:
                 "quora": [f"Y Combinator {prompt} ideas", f"successful {prompt} startups"]
             }
     
+    def enrich_ideas(self, ideas: list) -> list:
+        """Enrich ideas with scores, justifications, and execution steps."""
+        try:
+            idea_texts = [idea['idea'] for idea in ideas]
+            system_prompt = """
+            You are a YC partner. For each business idea, return a JSON object with a single key "enriched_ideas".
+            The value of "enriched_ideas" should be a list of JSON objects, each with the following fields:
+            - 'idea': The original idea text.
+            - 'novelty': A score from 1-10.
+            - 'uniqueness': A score from 1-10.
+            - 'business_value': A score from 1-10.
+            - 'justification': A brief explanation for the scores.
+            - 'execution_pathway': A list of the first 3 actionable steps.
+            - 'keywords': A list of relevant keywords.
+            - 'market_size': Estimated TAM and CAGR.
+            - 'competitors': A list of potential competitors and a key differentiator.
+            - 'monetization_model': A suggested monetization model.
+            - 'hackathon_mvp_roadmap': A 3-step MVP roadmap for a hackathon.
+            - 'investor_pitch_roadmap': A 3-step roadmap for an investor pitch.
+            """
+            user_prompt = f"Enrich the following ideas: {json.dumps(idea_texts)}"
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+
+            if response.choices and response.choices[0].message and response.choices[0].message.content:
+                enriched_data = json.loads(response.choices[0].message.content)
+                if isinstance(enriched_data, dict):
+                    enriched_list = enriched_data.get("enriched_ideas", [])
+                else:
+                    enriched_list = enriched_data
+
+                for original, enriched in zip(ideas, enriched_list):
+                    enriched['source'] = original.get('source')
+                return enriched_list
+            else:
+                st.error("Failed to enrich ideas. The response was empty.")
+                return ideas
+        except Exception as e:
+            st.error(f"An error occurred while enriching ideas: {e}")
+            return ideas
+
     def generate_unique_ideas(self, prompt: str, reddit_data, quora_data, num_ideas: int = 20):
         """Generate 10 ideas from Reddit and 10 from Quora for speed"""
         try:
@@ -243,6 +314,34 @@ Important:
             st.error(f"Error generating unique ideas: {e}")
             return []
     
+    def refine_idea(self, idea: str) -> list:
+        """Generate variations and deeper versions of a given idea."""
+        try:
+            system_prompt = """
+            You are a business strategy consultant. Based on the user's business idea, generate 5 distinct variations or deeper dives.
+            For each variation, provide a 'title' and a 'description'.
+            Return the result as a JSON object with a key 'refined_ideas' containing a list of these variations.
+            """
+            user_prompt = f"Refine this business idea: {idea}"
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+
+            if response.choices and response.choices[0].message and response.choices[0].message.content:
+                return json.loads(response.choices[0].message.content).get("refined_ideas", [])
+            else:
+                st.error("Failed to refine the idea. The response was empty.")
+                return []
+        except Exception as e:
+            st.error(f"An error occurred while refining the idea: {e}")
+            return []
+
     def _generate_ideas_from_source(self, prompt: str, data, source: str, target_count: int):
         """Generate ideas from a specific source"""
         ideas = []
@@ -250,10 +349,7 @@ Important:
         
         # Process data based on type
         content_list = []
-        if isinstance(data, pd.DataFrame) and not data.empty:
-            for _, row in data.iterrows():
-                content_list.append(f"{row.get('title', '')} {row.get('text', '')}")
-        elif isinstance(data, list) and data:
+        if isinstance(data, list) and data:
             for item in data:
                 if isinstance(item, dict):
                     content_list.append(f"{item.get('title', '')} {item.get('text', '')}")

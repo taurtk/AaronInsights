@@ -278,29 +278,40 @@ def main():
                 
                 # Generate ideas with source tracking
                 unique_ideas = deepseek_client.generate_unique_ideas(prompt, combined_data, 20)
+                enriched_ideas = deepseek_client.enrich_ideas(unique_ideas)
                 
-                if unique_ideas:
-                    reddit_count = sum(1 for idea in unique_ideas if idea['source'] == 'reddit')
-                    quora_count = sum(1 for idea in unique_ideas if idea['source'] == 'quora')
-                    
-                    st.markdown(f"""
-                    <div class="ideas-header">
-                        <h3>💡 {len(unique_ideas)} Unique Business Ideas</h3>
-                        <div class="ideas-count">
-                            🔴 Reddit: {reddit_count} | 🟣 Quora: {quora_count}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    for i, idea_data in enumerate(unique_ideas, 1):
-                        source_tag = 'reddit-tag' if idea_data['source'] == 'reddit' else 'quora-tag'
-                        st.markdown(f'''
-                        <div class="unique-idea">
-                            <span class="tag {source_tag}">{idea_data['source'].title()}</span>
-                            <h5>💡 Idea #{i}</h5>
-                            <p>{idea_data['idea']}</p>
-                        </div>
-                        ''', unsafe_allow_html=True)
+                if enriched_ideas:
+                    # Simple clustering by keywords
+                    clusters = {}
+                    for idea in enriched_ideas:
+                        # Use the first keyword as the cluster key
+                        if idea.get('keywords'):
+                            key = idea['keywords'][0]
+                            if key not in clusters:
+                                clusters[key] = []
+                            clusters[key].append(idea)
+
+                    for cluster, ideas in clusters.items():
+                        st.subheader(f"Theme: {cluster.capitalize()}")
+                        for i, idea_data in enumerate(ideas, 1):
+                            st.markdown(f"**Idea {i}:** {idea_data['idea']}")
+                            st.write(f"**Novelty:** {idea_data['novelty']}/10 | **Uniqueness:** {idea_data['uniqueness']}/10 | **Business Value:** {idea_data['business_value']}/10")
+                            st.write(f"**Justification:** {idea_data['justification']}")
+                            st.write(f"**Market Size:** {idea_data['market_size']}")
+                            st.write(f"**Competitors & Differentiator:** {idea_data['competitors']}")
+                            st.write(f"**Monetization Model:** {idea_data['monetization_model']}")
+                            st.write("**Hackathon MVP Roadmap:**")
+                            for step in idea_data['hackathon_mvp_roadmap']:
+                                st.write(f"- {step}")
+                            st.write("**Investor Pitch Roadmap:**")
+                            for step in idea_data['investor_pitch_roadmap']:
+                                st.write(f"- {step}")
+                            st.divider()
+                            if st.button(f"Refine Idea", key=f"refine_{cluster}_{i}"):
+                                with st.spinner("Refining idea..."):
+                                    refined_ideas = deepseek_client.refine_idea(idea_data['idea'])
+                                    for refined_idea in refined_ideas:
+                                        st.info(f"**{refined_idea['title']}**: {refined_idea['description']}")
                     
 
                 else:

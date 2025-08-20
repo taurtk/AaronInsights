@@ -24,7 +24,7 @@ class RedditClient:
             st.error(f"Reddit authentication failed: {e}")
             self.reddit = None
 
-    @st.cache_data(ttl=3600)
+    @st.cache_data(ttl=3600, show_spinner=False)
     def fetch_subreddit_data(_self, subreddit_names: list, time_filter='week', limit=50):
         """Fetch posts from specified subreddits with high-value startup communities"""
         # Top 20 verified high-value startup subreddits for speed
