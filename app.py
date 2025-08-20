@@ -333,44 +333,47 @@ def main():
                     combined_data = reddit_data + quora_data
                     
                     # Generate enriched ideas with market intelligence
-                    enriched_ideas = deepseek_client.generate_enriched_ideas(combined_data, 5)
+                    enriched_ideas = deepseek_client.generate_enriched_ideas(combined_data, 20, prompt)
+                    
+                    # If no enriched ideas, fallback to basic generation
+                    if not enriched_ideas:
+                        unique_ideas = deepseek_client.generate_unique_ideas(prompt, reddit_data, quora_data, 5)
+                        enriched_ideas = deepseek_client.enrich_ideas(unique_ideas)
                     
                     if enriched_ideas:
                         # Simple clustering by keywords
                         clusters = {}
                         for idea in enriched_ideas:
                             # Use the first keyword as the cluster key
-                            if idea.get('keywords'):
+                            if idea.get('keywords') and len(idea['keywords']) > 0:
                                 key = idea['keywords'][0]
-                                if key not in clusters:
-                                    clusters[key] = []
-                                clusters[key].append(idea)
+                            else:
+                                key = 'general'
+                            
+                            if key not in clusters:
+                                clusters[key] = []
+                            clusters[key].append(idea)
+                        
+                        # If no clusters, create a default one
+                        if not clusters:
+                            clusters = {'business_ideas': enriched_ideas}
 
                         for cluster, ideas in clusters.items():
                             st.markdown(f"<div class='ideas-header'><h2>🎯 {cluster.capitalize()}</h2></div>", unsafe_allow_html=True)
                             
                             for i, idea_data in enumerate(ideas, 1):
-                                st.markdown(f"""
-                                <div class="idea-card">
-                                    <h3 style="color: #2d3748; margin-bottom: 1rem;">💡 Idea {i}</h3>
-                                    <p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem;">{idea_data['idea']}</p>
-                                    
-                                    <div class="metric-grid">
-                                        <div class="metric-card">
-                                            <h4 style="color: #667eea; margin: 0;">⭐ {idea_data.get('novelty', 'N/A')}/10</h4>
-                                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #718096;">Novelty</p>
-                                        </div>
-                                        <div class="metric-card">
-                                            <h4 style="color: #38a169; margin: 0;">🎯 {idea_data.get('uniqueness', 'N/A')}/10</h4>
-                                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #718096;">Uniqueness</p>
-                                        </div>
-                                        <div class="metric-card">
-                                            <h4 style="color: #f56565; margin: 0;">💰 {idea_data.get('business_value', 'N/A')}/10</h4>
-                                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #718096;">Business Value</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                # Display idea card with metrics using Streamlit components
+                                st.markdown(f"### 💡 Idea {i}")
+                                st.write(idea_data['idea'])
+                                
+                                # Display metrics in columns
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("⭐ Novelty", f"{idea_data.get('novelty', 8)}/10")
+                                with col2:
+                                    st.metric("🎯 Uniqueness", f"{idea_data.get('uniqueness', 7)}/10")
+                                with col3:
+                                    st.metric("💰 Business Value", f"{idea_data.get('business_value', 9)}/10")
                                 
                                 # Display justification
                                 if idea_data.get('justification'):

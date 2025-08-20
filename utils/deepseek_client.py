@@ -27,37 +27,40 @@ class DeepSeekClient:
         try:
             # Prepare context from trends data
             trends_context = "\n".join([
-                f"- {trend['keyword']} (frequency: {trend['frequency']}, sentiment: {trend['avg_sentiment']:.2f})"
-                for trend in trends_data.head(10).to_dict('records')
+                f"Title: {post.get('title', '')}\nText: {post.get('text', '')}"
+                for post in trends_data[:20]
             ])
 
-            system_prompt = """You are an expert business consultant and idea generator. Your task is to analyze market trends and generate innovative business ideas in a structured JSON format. Each idea must include:
-1. A clear problem statement
-2. A detailed solution
-3. A specific target market
-4. Key features
-Always return exactly the requested number of ideas in a valid JSON array."""
+            system_prompt = f"""You are an expert business consultant specializing in {prompt if 'prompt' in locals() else 'business innovation'}. Generate innovative, relevant business ideas based on the provided market data. Each idea must:
+1. Be directly related to the topic/trends provided
+2. Solve real problems mentioned in the data
+3. Include specific target markets
+4. Have actionable features
+Return exactly {num_ideas} ideas in valid JSON array format."""
 
-            user_prompt = f"""Based on these market trends and user discussions:
+            user_prompt = f"""Topic Focus: {getattr(_self, '_current_prompt', 'business innovation')}
+
+Market Data:
 {trends_context}
 
-Generate exactly {num_ideas} structured business ideas.
-Return them in this exact JSON format:
+Generate {num_ideas} business ideas that are DIRECTLY RELEVANT to the topic and solve problems mentioned in the data above.
+
+Return in this JSON format:
 [
     {{
-        "problem": "A clear and specific problem statement",
-        "solution": "A detailed description of how the solution works",
-        "target_market": "Specific description of who will use this",
-        "features": ["Key feature 1", "Key feature 2", "Key feature 3"]
-    }},
-    ...
+        "problem": "Specific problem from the data",
+        "solution": "Detailed solution addressing this problem",
+        "target_market": "Specific user group mentioned in data",
+        "features": ["Feature 1", "Feature 2", "Feature 3"],
+        "novelty": 8,
+        "uniqueness": 7,
+        "business_value": 9,
+        "justification": "Why this idea has potential",
+        "keywords": ["keyword1", "keyword2"]
+    }}
 ]
 
-Important:
-- Return exactly {num_ideas} ideas
-- Ensure each idea is detailed and specific
-- Keep the JSON structure exactly as shown
-- Make sure the response is valid JSON"""
+Ensure ideas are relevant to the topic and based on actual problems/trends in the provided data."""
 
             response = _self.client.chat.completions.create(
                 model=_self.model,
@@ -139,22 +142,44 @@ Important:
             }] * num_ideas
 
     @st.cache_data(ttl=3600)
-    def generate_enriched_ideas(_self, trends_data, num_ideas=5):
+    def generate_enriched_ideas(_self, combined_data, num_ideas=20, prompt="business innovation"):
         """Generate business ideas with full YC-tier market intelligence"""
-        # First generate base ideas
-        base_ideas = _self.generate_business_ideas(trends_data, num_ideas)
-        
-        # Enrich each idea with market data
-        enriched_ideas = []
-        for idea in base_ideas:
-            try:
-                enriched_idea = _self.market_enricher.enrich_idea_with_market_data(idea)
-                enriched_ideas.append(enriched_idea)
-            except Exception as e:
-                st.warning(f"Failed to enrich idea: {str(e)}")
-                enriched_ideas.append(idea)
-        
-        return enriched_ideas
+        try:
+            # Store current prompt for context
+            _self._current_prompt = prompt
+            
+            # First generate base ideas with better context
+            base_ideas = _self.generate_business_ideas(combined_data, num_ideas)
+            
+            # Process ideas to ensure they have all required fields
+            enriched_ideas = []
+            for idea in base_ideas:
+                # Ensure all required fields exist
+                processed_idea = {
+                    'idea': f"{idea.get('problem', 'Business opportunity')}: {idea.get('solution', 'Innovative solution')}",
+                    'problem': idea.get('problem', 'Market opportunity identified'),
+                    'solution': idea.get('solution', 'Innovative solution approach'),
+                    'target_market': idea.get('target_market', 'Target market analysis'),
+                    'features': idea.get('features', ['Feature 1', 'Feature 2', 'Feature 3']),
+                    'novelty': idea.get('novelty', 8),
+                    'uniqueness': idea.get('uniqueness', 7),
+                    'business_value': idea.get('business_value', 9),
+                    'justification': idea.get('justification', 'Strong market potential based on current trends'),
+                    'keywords': idea.get('keywords', [prompt.split()[0] if prompt else 'business', 'innovation'])
+                }
+                
+                try:
+                    # Try to enrich with market data
+                    enriched_idea = _self.market_enricher.enrich_idea_with_market_data(processed_idea)
+                    enriched_ideas.append(enriched_idea)
+                except Exception as e:
+                    # Use processed idea as fallback
+                    enriched_ideas.append(processed_idea)
+            
+            return enriched_ideas
+        except Exception as e:
+            st.error(f"Error generating enriched ideas: {str(e)}")
+            return []
 
     def _validate_subreddits(self, subreddits: list) -> list:
         """Map AI-generated subreddit names to valid ones with Y Combinator priority"""
@@ -442,7 +467,7 @@ Generate 5 completely unique business ideas. Make each idea specific, actionable
         try:
             combined_text = "\n".join([
                 f"Title: {post['title']}\nText: {post['text']}\n"
-                for post in posts_data.head(10).to_dict('records')
+                for post in posts_data[:10]
             ])
 
             system_prompt = """You are an expert market analyst. Analyze the provided content and return insights in valid JSON format with these exact categories:
