@@ -138,7 +138,7 @@ Important:
             }] * num_ideas
 
     def _validate_subreddits(self, subreddits: list) -> list:
-        """Map AI-generated subreddit names to valid ones"""
+        """Map AI-generated subreddit names to valid ones with Y Combinator priority"""
         valid_mapping = {
             'AI': 'artificial',
             'MachineLearning': 'MachineLearning',
@@ -155,74 +155,90 @@ Important:
             'OnlineLearning': 'OnlineEducation'
         }
         
-        # Common valid subreddits by category
-        fallback_subreddits = [
-            'entrepreneur', 'startups', 'business', 'technology', 'innovation',
-            'artificial', 'MachineLearning', 'investing', 'smallbusiness', 'marketing'
+        # High-value subreddits prioritized
+        high_value_subreddits = [
+            'YCombinator', 'startups', 'entrepreneur', 'business', 'SideProject',
+            'indiehackers', 'SaaS', 'EntrepreneurRideAlong', 'smallbusiness',
+            'growmybusiness', 'BusinessIdeas', 'startup_ideas'
         ]
         
         validated = []
         for sub in subreddits:
             if sub in valid_mapping:
                 validated.append(valid_mapping[sub])
-            elif sub.lower() in [s.lower() for s in fallback_subreddits]:
+            elif sub in high_value_subreddits:
+                validated.append(sub)
+            elif sub.lower() in [s.lower() for s in high_value_subreddits]:
                 validated.append(sub)
             else:
-                # Replace invalid with fallback
-                if len(validated) < 5:
-                    validated.append(fallback_subreddits[len(validated)])
+                # Replace invalid with high-value fallback
+                if len(validated) < 10:
+                    validated.append(high_value_subreddits[len(validated) % len(high_value_subreddits)])
         
-        return validated[:5]  # Limit to 5
+        return validated[:10]  # Increased limit to capture more sources
 
     def generate_search_queries(_self, prompt: str) -> dict:
-        """Generate subreddit and Quora search queries from a prompt."""
+        """Generate subreddit and Quora search queries from a prompt with high-value sources."""
         try:
-            # Use predefined valid subreddits based on common topics
+            # Top 15 verified high-value startup subreddits for speed
+            base_subreddits = [
+                'YCombinator', 'startups', 'Entrepreneur', 'business', 'SideProject', 'indiehackers', 
+                'smallbusiness', 'BusinessIdeas', 'investing', 'technology', 'artificial', 'MachineLearning', 
+                'marketing', 'ecommerce', 'cryptocurrency'
+            ]
+            
+            # Add topic-specific subreddits
             topic_keywords = prompt.lower()
+            topic_subreddits = []
             
             if any(word in topic_keywords for word in ['ai', 'artificial', 'machine', 'tech']):
-                subreddits = ['artificial', 'MachineLearning', 'technology', 'startups', 'entrepreneur']
-            elif any(word in topic_keywords for word in ['business', 'startup', 'entrepreneur']):
-                subreddits = ['entrepreneur', 'startups', 'business', 'smallbusiness', 'investing']
+                topic_subreddits = ['artificial', 'MachineLearning', 'technology', 'SaaS', 'indiehackers']
             elif any(word in topic_keywords for word in ['fitness', 'health', 'wellness']):
-                subreddits = ['fitness', 'health', 'nutrition', 'bodyweightfitness', 'loseit']
+                topic_subreddits = ['fitness', 'health', 'nutrition', 'bodyweightfitness', 'loseit']
             elif any(word in topic_keywords for word in ['sustainable', 'eco', 'green', 'environment']):
-                subreddits = ['ZeroWaste', 'sustainability', 'environment', 'renewable', 'climatechange']
+                topic_subreddits = ['ZeroWaste', 'sustainability', 'environment', 'renewable', 'climatechange']
+            elif any(word in topic_keywords for word in ['finance', 'money', 'fintech']):
+                topic_subreddits = ['investing', 'SecurityAnalysis', 'financialindependence', 'personalfinance']
+            elif any(word in topic_keywords for word in ['education', 'learning', 'course']):
+                topic_subreddits = ['OnlineEducation', 'GetStudying', 'studytips', 'teachers']
             else:
-                subreddits = ['entrepreneur', 'startups', 'business', 'technology', 'innovation']
+                topic_subreddits = ['innovation', 'smallbusiness', 'growmybusiness', 'BusinessIdeas']
             
-            # Generate Quora queries
+            # Combine base and topic subreddits
+            all_subreddits = base_subreddits + topic_subreddits
+            
+            # Top 10 high-value Quora queries for speed
             quora_queries = [
-                f"best {prompt} business ideas",
-                f"how to start {prompt} company",
-                f"{prompt} market opportunities",
-                f"{prompt} industry trends 2024",
-                f"profitable {prompt} niches"
+                f"Y Combinator {prompt} startup ideas", f"successful {prompt} business models", 
+                f"best {prompt} business ideas", f"profitable {prompt} niches", 
+                f"unicorn {prompt} startups", f"bootstrapped {prompt} businesses",
+                f"{prompt} market opportunities", f"{prompt} SaaS business", 
+                f"{prompt} AI applications", f"{prompt} fintech solutions"
             ]
             
             return {
-                "subreddits": subreddits,
+                "subreddits": all_subreddits,
                 "quora": quora_queries
             }
             
         except Exception as e:
             st.error(f"An error occurred while generating search queries: {e}")
             return {
-                "subreddits": ['entrepreneur', 'startups', 'business', 'technology', 'innovation'],
-                "quora": [f"best {prompt} ideas", f"how to start {prompt} business"]
+                "subreddits": ['YCombinator', 'startups', 'entrepreneur', 'business', 'SideProject'],
+                "quora": [f"Y Combinator {prompt} ideas", f"successful {prompt} startups"]
             }
     
-    def generate_unique_ideas(self, prompt: str, reddit_data, quora_data, num_ideas: int = 50):
-        """Generate 50 ideas from Reddit and 50 from Quora"""
+    def generate_unique_ideas(self, prompt: str, reddit_data, quora_data, num_ideas: int = 20):
+        """Generate 10 ideas from Reddit and 10 from Quora for speed"""
         try:
             all_ideas = []
             
-            # Generate 50 ideas from Reddit
-            reddit_ideas = self._generate_ideas_from_source(prompt, reddit_data, 'reddit', 50)
+            # Generate 10 ideas from Reddit
+            reddit_ideas = self._generate_ideas_from_source(prompt, reddit_data, 'reddit', 10)
             all_ideas.extend(reddit_ideas)
             
-            # Generate 50 ideas from Quora
-            quora_ideas = self._generate_ideas_from_source(prompt, quora_data, 'quora', 50)
+            # Generate 10 ideas from Quora
+            quora_ideas = self._generate_ideas_from_source(prompt, quora_data, 'quora', 10)
             all_ideas.extend(quora_ideas)
             
             return all_ideas

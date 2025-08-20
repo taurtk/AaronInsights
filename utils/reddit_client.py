@@ -27,15 +27,29 @@ class RedditClient:
 
     @st.cache_data(ttl=3600)
     def fetch_subreddit_data(_self, subreddit_names: list, time_filter='week', limit=50):
-        """Fetch posts from specified subreddits"""
+        """Fetch posts from specified subreddits with high-value startup communities"""
+        # Top 20 verified high-value startup subreddits for speed
+        high_value_subreddits = [
+            'YCombinator', 'startups', 'business', 'technology', 'innovation', 'SideProject', 
+            'smallbusiness', 'Entrepreneur', 'BusinessIdeas', 'indiehackers', 'investing', 
+            'artificial', 'MachineLearning', 'programming', 'webdev', 'marketing', 
+            'ecommerce', 'cryptocurrency', 'Bitcoin', 'fitness'
+        ]
+        
+        # Combine user queries with high-value subreddits (remove duplicates)
+        all_subreddits = list(set(subreddit_names + high_value_subreddits))
+        
         all_posts = []
-        for subreddit_name in subreddit_names:
+        for subreddit_name in all_subreddits:
             try:
                 subreddit = _self.reddit.subreddit(subreddit_name)
                 # Test if subreddit exists
                 subreddit.display_name
                 
-                for post in subreddit.hot(limit=limit):
+                # Get only hot posts for speed
+                posts_to_fetch = list(subreddit.hot(limit=10))
+                
+                for post in posts_to_fetch:
                     all_posts.append({
                         'title': post.title,
                         'text': post.selftext or post.title,
@@ -43,7 +57,8 @@ class RedditClient:
                         'comments': post.num_comments,
                         'created_utc': datetime.fromtimestamp(post.created_utc),
                         'url': post.url,
-                        'id': post.id
+                        'id': post.id,
+                        'subreddit': subreddit_name
                     })
             except Exception as e:
                 st.warning(f"Skipping subreddit '{subreddit_name}': {str(e)}")
