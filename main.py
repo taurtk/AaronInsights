@@ -3,6 +3,7 @@ import plotly.express as px
 from utils.reddit_analyzer import RedditAnalyzer
 from utils.nlp_processor import NLPProcessor
 from utils.idea_generator import IdeaGenerator
+from utils.quora_client import QuoraClient
 
 # Page configuration
 st.set_page_config(
@@ -19,13 +20,30 @@ if 'nlp_processor' not in st.session_state:
     st.session_state.nlp_processor = NLPProcessor()
 if 'idea_generator' not in st.session_state:
     st.session_state.idea_generator = IdeaGenerator()
+if 'quora_client' not in st.session_state:
+    st.session_state.quora_client = QuoraClient()
 
 # Main page header
 st.title("💡 AI-Powered Idea Generator")
 st.markdown("""
-Discover innovative business ideas by analyzing Reddit discussions and trends.
-This tool uses AI to process user discussions and generate valuable insights.
+Discover innovative business ideas by analyzing Reddit discussions, trends, and Quora insights.
+This tool uses AI to process user discussions and generate valuable startup ideas from multiple sources.
 """)
+
+# Add Quora ideas section
+st.subheader("🚀 Startup Ideas from Quora")
+with st.spinner("Fetching startup ideas from Quora..."):
+    quora_ideas = st.session_state.quora_client.search_startup_ideas(limit=8)
+    
+    if quora_ideas:
+        cols = st.columns(2)
+        for i, idea in enumerate(quora_ideas):
+            with cols[i % 2]:
+                st.info(f"**{idea['category']}**: {idea['title']}")
+    else:
+        st.info("No Quora ideas available at the moment.")
+
+st.divider()
 
 # Sidebar
 st.sidebar.title("Settings")

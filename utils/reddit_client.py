@@ -15,43 +15,41 @@ class RedditClient:
         # print(f"REDDIT_CLIENT_SECRET: {os.getenv('REDDIT_CLIENT_SECRET')}")
         print("---------------------------------------")
         
-        client_id = "WCJasChIwA9F6W3DnVmIiQ"
-        client_secret = "c2GNbz0F-KwrB3-BGuNIzDpED_HZ1A"
-        user_agent = "IdeaGenerator/1.0 (by /u/IdeasBot)"  # Set a default user agent
-
-        # If environment variables are not set, try reading from praw.ini (optional)
-        if not client_id or not client_secret:
-            print("Environment variables not found, attempting to load from praw.ini")
-            self.reddit = praw.Reddit(user_agent=user_agent)  # Load from praw.ini
-        else:
+        try:
             self.reddit = praw.Reddit(
-                client_id=client_id,
-                client_secret=client_secret,
-                user_agent=user_agent
+                client_id="WCJasChIwA9F6W3DnVmIiQ",
+                client_secret="c2GNbz0F-KwrB3-BGuNIzDpED_HZ1A",
+                user_agent="AaronInsights/1.0"
             )
+        except Exception as e:
+            st.error(f"Reddit authentication failed: {e}")
+            self.reddit = None
 
     @st.cache_data(ttl=3600)
-    def fetch_subreddit_data(_self, subreddit_name, time_filter='week', limit=100):
-        """Fetch posts from specified subreddit"""
-        try:
-            subreddit = _self.reddit.subreddit(subreddit_name)
-            posts = []
-
-            for post in subreddit.top(time_filter=time_filter, limit=limit):
-                posts.append({
-                    'title': post.title,
-                    'text': post.selftext,
-                    'score': post.score,
-                    'comments': post.num_comments,
-                    'created_utc': datetime.fromtimestamp(post.created_utc),
-                    'url': post.url,
-                    'id': post.id
-                })
-
-            return pd.DataFrame(posts)
-        except Exception as e:
-            st.error(f"Error fetching Reddit data: {str(e)}")
-            return pd.DataFrame()
+    def fetch_subreddit_data(_self, subreddit_names: list, time_filter='week', limit=50):
+        """Fetch posts from specified subreddits"""
+        all_posts = []
+        for subreddit_name in subreddit_names:
+            try:
+                subreddit = _self.reddit.subreddit(subreddit_name)
+                # Test if subreddit exists
+                subreddit.display_name
+                
+                for post in subreddit.hot(limit=limit):
+                    all_posts.append({
+                        'title': post.title,
+                        'text': post.selftext or post.title,
+                        'score': post.score,
+                        'comments': post.num_comments,
+                        'created_utc': datetime.fromtimestamp(post.created_utc),
+                        'url': post.url,
+                        'id': post.id
+                    })
+            except Exception as e:
+                st.warning(f"Skipping subreddit '{subreddit_name}': {str(e)}")
+                continue
+        
+        return pd.DataFrame(all_posts) if all_posts else pd.DataFrame()
 
     def get_comments(self, post_id, limit=50):
         """Fetch comments for a specific post"""
