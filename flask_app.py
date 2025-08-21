@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, session
 from utils.reddit_client import RedditClient
 from utils.quora_client import QuoraClient
 from utils.deepseek_client import DeepSeekClient
-from utils.waitlist import add_to_waitlist, init_db
+from utils.users import add_user, init_db
 import os
 
 app = Flask(__name__)
@@ -20,14 +20,14 @@ with app.app_context():
 @app.route('/')
 def index():
     if 'user_email' not in session:
-        return render_template('waitlist.html')
+        return render_template('signup.html')
     return render_template('index.html')
 
-@app.route('/join_waitlist', methods=['POST'])
-def join_waitlist():
+@app.route('/signup', methods=['POST'])
+def signup():
     email = request.form.get('email')
     if email:
-        add_to_waitlist(email)
+        add_user(email)
         session['user_email'] = email
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Invalid email'})

@@ -15,7 +15,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS waitlist (
+            CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -27,13 +27,13 @@ def init_db():
     except Exception as e:
         print(f"Database initialization failed: {e}")
 
-def add_to_waitlist(email: str):
-    """Add email to waitlist database."""
+def add_user(email: str):
+    """Add email to users database."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO waitlist (email) VALUES (%s) ON CONFLICT (email) DO NOTHING",
+            "INSERT INTO users (email) VALUES (%s) ON CONFLICT (email) DO NOTHING",
             (email,)
         )
         conn.commit()
@@ -41,13 +41,15 @@ def add_to_waitlist(email: str):
         conn.close()
     except Exception as e:
         print(f"Failed to add email: {e}")
+        import traceback
+        traceback.print_exc()
 
-def is_on_waitlist(email: str) -> bool:
-    """Check if email exists in waitlist."""
+def user_exists(email: str) -> bool:
+    """Check if email exists in users."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM waitlist WHERE email = %s", (email,))
+        cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
         result = cur.fetchone() is not None
         cur.close()
         conn.close()

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Started with NicheGenius</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="signup-container">
+            <h1>🚀 Welcome to NicheGenius!</h1>
+            <p class="tagline">The AI-powered tool that uncovers profitable niche markets and generates innovative startup ideas.</p>
+            
+            <div class="features">
+                <h2>What You'll Get:</h2>
+                <ul>
+                    <li><strong>Data-Driven Insights:</strong> We analyze real-time data from Reddit and Quora to identify emerging trends and pain points.</li>
+                    <li><strong>AI-Powered Idea Generation:</strong> Our advanced AI generates unique and actionable business ideas tailored to your interests.</li>
+                    <li><strong>Comprehensive Market Analysis:</strong> Get a complete picture of the market, including TAM, CAGR, and competitive landscape.</li>
+                    <li><strong>Actionable Roadmaps:</strong> We provide clear, step-by-step roadmaps to help you build your MVP and pitch to investors.</li>
+                </ul>
+            </div>
+
+            <h2>Get Started Now:</h2>
+            <form id="signup-form">
+                <input type="email" id="email" name="email" placeholder="Enter your email to get started:" required>
+                <button type="submit">Get Started</button>
+            </form>
+            <p id="message"></p>
+        </div>
+    </div>
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message');
+            
+            const response = await fetch('/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `email=${email}`
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                message.textContent = "Success! You can now use the app.";
+                message.style.color = 'green';
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                message.textContent = result.error || 'An error occurred.';
+                message.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>
