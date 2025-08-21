@@ -3,7 +3,6 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from collections import Counter
-import streamlit as st
 
 # Download required NLTK data
 nltk.download('punkt')

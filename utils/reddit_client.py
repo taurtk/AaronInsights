@@ -1,6 +1,5 @@
 import praw
 from datetime import datetime, timedelta
-import streamlit as st
 import os
 # from dotenv import load_dotenv
 
@@ -21,11 +20,10 @@ class RedditClient:
                 user_agent="AaronInsights/1.0"
             )
         except Exception as e:
-            st.error(f"Reddit authentication failed: {e}")
+            print(f"Reddit authentication failed: {e}")
             self.reddit = None
 
-    @st.cache_data(ttl=3600, show_spinner=False)
-    def fetch_subreddit_data(_self, subreddit_names: list, time_filter='week', limit=50):
+    def fetch_subreddit_data(self, subreddit_names: list, time_filter='week', limit=50):
         """Fetch posts from specified subreddits with high-value startup communities"""
         # Top 20 verified high-value startup subreddits for speed
         high_value_subreddits = [
@@ -41,7 +39,7 @@ class RedditClient:
         all_posts = []
         for subreddit_name in all_subreddits:
             try:
-                subreddit = _self.reddit.subreddit(subreddit_name)
+                subreddit = self.reddit.subreddit(subreddit_name)
                 # Test if subreddit exists
                 subreddit.display_name
                 
@@ -60,7 +58,7 @@ class RedditClient:
                         'subreddit': subreddit_name
                     })
             except Exception as e:
-                st.warning(f"Skipping subreddit '{subreddit_name}': {str(e)}")
+                print(f"Warning: Skipping subreddit '{subreddit_name}': {str(e)}")
                 continue
         
         return all_posts
@@ -81,5 +79,5 @@ class RedditClient:
 
             return comments
         except Exception as e:
-            st.error(f"Error fetching comments: {str(e)}")
+            print(f"Error fetching comments: {str(e)}")
             return []

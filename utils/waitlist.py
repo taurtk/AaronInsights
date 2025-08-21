@@ -1,11 +1,13 @@
-import streamlit as st
 import os
 import psycopg2
 from datetime import datetime
 
 def get_db_connection():
     """Get database connection."""
-    return psycopg2.connect(os.getenv("DATABASE_URL"))
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable is not set.")
+    return psycopg2.connect(db_url)
 
 def init_db():
     """Initialize database table."""
@@ -23,7 +25,7 @@ def init_db():
         cur.close()
         conn.close()
     except Exception as e:
-        st.error(f"Database initialization failed: {e}")
+        print(f"Database initialization failed: {e}")
 
 def add_to_waitlist(email: str):
     """Add email to waitlist database."""
@@ -38,7 +40,7 @@ def add_to_waitlist(email: str):
         cur.close()
         conn.close()
     except Exception as e:
-        st.error(f"Failed to add email: {e}")
+        print(f"Failed to add email: {e}")
 
 def is_on_waitlist(email: str) -> bool:
     """Check if email exists in waitlist."""
@@ -51,5 +53,5 @@ def is_on_waitlist(email: str) -> bool:
         conn.close()
         return result
     except Exception as e:
-        st.error(f"Database check failed: {e}")
+        print(f"Database check failed: {e}")
         return False

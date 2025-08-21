@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import time
 import random
 from typing import List, Dict
+import os
 
 class QuoraClient:
     """Client for scraping startup ideas from Quora"""
@@ -14,6 +15,11 @@ class QuoraClient:
         }
         self.session = requests.Session()
         self.session.headers.update(self.headers)
+
+        # Add proxy for PythonAnywhere
+        if "https_proxy" in os.environ:
+            proxy = os.environ["https_proxy"]
+            self.session.proxies = {"http": proxy, "https": proxy}
     
     def fetch_quora_data(self, queries: List[str], limit_per_query: int = 100) -> List[Dict]:
         """

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join the NicheGenius Waitlist</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="waitlist-container">
+            <h1>🚀 Join the NicheGenius Waitlist!</h1>
+            <form id="waitlist-form">
+                <input type="email" id="email" name="email" placeholder="Enter your email to get started:" required>
+                <button type="submit">Join Waitlist</button>
+            </form>
+            <p id="message"></p>
+        </div>
+    </div>
+    <script>
+        document.getElementById('waitlist-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message');
+            
+            const response = await fetch('/join_waitlist', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `email=${email}`
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                message.textContent = "You're on the waitlist! You can now use the app.";
+                message.style.color = 'green';
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                message.textContent = result.error || 'An error occurred.';
+                message.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>

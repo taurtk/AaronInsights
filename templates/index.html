@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NicheGenius - AI Idea Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="main-header">
+            <h1>✨ NicheGenius</h1>
+            <p>AI-Powered Niche Product Idea Generator</p>
+            <p>Discover untapped market opportunities and innovative business ideas</p>
+        </div>
+
+        <div class="input-section">
+            <h3 style="color: #2d3748; font-weight: 600; margin-bottom: 1rem;">🎯 What's your interest area?</h3>
+            <form id="idea-form">
+                <input type="text" id="prompt" name="prompt" placeholder="e.g., sustainable living, remote work, fitness tech...">
+                <button type="submit">Generate Ideas</button>
+            </form>
+        </div>
+
+        <div id="loading" class="loading-container" style="display:none;">
+            <p class="pulse">⏳ Loading ideas... This may take up to 1 minute</p>
+        </div>
+
+        <div id="ideas-container"></div>
+
+        <div class="example-topics">
+            <h3 style="color: #2d3748; font-weight: 600;">🌟 Popular Topics</h3>
+            <p style="color: #718096; margin-bottom: 2rem;">Click any topic to get started instantly</p>
+            <div class="example-buttons">
+                <button class="example-button">🌱 Sustainable Living</button>
+                <button class="example-button">💻 Remote Work Tools</button>
+                <button class="example-button">🏋️ Fitness Tech</button>
+                <button class="example-button">🎨 Creative Hobbies</button>
+                <button class="example-button">🏠 Smart Home</button>
+                <button class="example-button">📚 Online Learning</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
